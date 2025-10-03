@@ -1,0 +1,86 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f7f7f9;
+  margin: 0;
+  padding: 20px;
+}
+
+.app-container {
+  max-width: 1200px;
+  margin: auto;
+}
+
+h2 {
+  margin-bottom: 15px;
+}
+
+.top-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.btn {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn.white {
+  background: #fff;
+  border: 1px solid #ccc;
+}
+
+.btn.purple {
+  background: #5a4fcf;
+  color: #fff;
+}
+
+.btn.yellow {
+  background: #f6b500;
+  color: #000;
+}
+
+.btn.gray {
+  background: #e0e0e0;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 20px;
+}
+
+.card {
+  background: #fff;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.feed-list {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.feed-item {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.feed-item:hover {
+  background: #f0f0f0;
+}
+
+.selected-post, .enriched-list, .risk-box, .activity-log {
+  border: 1px solid #ddd;
+  padding: 10px;
+  border-radius: 8px;
+  background: #fafafa;
+  margin-top: 10px;
+}

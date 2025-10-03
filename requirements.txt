@@ -1,0 +1,5 @@
+# Ensure these packages are installed in a virtual environment
+fastapi
+uvicorn
+pydantic
+CORSMiddleware

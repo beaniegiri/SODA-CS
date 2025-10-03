@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CyberShield — Abuse Detection </title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <h2>CyberShield — Abuse Detection</h2>
+
+    <div class="top-buttons">
+      <button class="btn purple">Push Enriched Events → CIRE (to be implemented)</button>
+    </div>
+
+    <div class="content-grid">
+      <!-- SoDA Feed -->
+      <div class="card soda-feed">
+        <h3>SoDA Feed</h3>
+        <div id="soda-feed-container" class="feed-list">
+          <!-- SoDA items will be inserted here by soda.js -->
+        </div>
+      </div>
+
+      <!-- Detection Console -->
+      <div class="card detection-console">
+        <h3>CyberShield Detection Console</h3>
+        <div id="selected-post" class="selected-post">
+          <p>Select a post from the feed</p>
+        </div>
+        <div class="action-buttons">
+          <button class="btn yellow">Run Detection</button>
+          <button class="btn gray">Detect (Local Only)</button>
+        </div>
+        <h4>Latest Enriched Events</h4>
+        <div id="enriched-events" class="enriched-list">
+          <p>No enriched events yet</p>
+        </div>
+      </div>
+
+      <!-- Post Details -->
+      <div class="card post-details">
+        <h3>Selected Post Details</h3>
+        <div id="post-details">
+          <p>No post selected</p>
+        </div>
+        <h4>CIRE Preview / Risk Scores</h4>
+        <div id="risk-scores" class="risk-box">
+          <p>No risk scores available</p>
+        </div>
+        <h4>Activity Log</h4>
+        <div id="activity-log" class="activity-log">
+          <p>No activity yet</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="soda.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
