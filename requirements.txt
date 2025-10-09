@@ -3,3 +3,6 @@ fastapi
 uvicorn
 pydantic
 CORSMiddleware
+torch
+transformers
+sentence-transformers

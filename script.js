@@ -54,6 +54,12 @@ function selectPost(post, index) {
   enrichedEvents.innerHTML = `<p>No enriched events yet</p>`;
 }
 
+async function fetchAbusiveWords() {
+  const response = await fetch("/abusive_words.txt");
+  const text = await response.text();
+  return text.split("\n").map(word => word.trim()).filter(word => word);
+}
+
 // 🔹 Run Detection (POST request to backend)
 async function runDetection() {
   if (!currentPost) {
@@ -62,31 +68,39 @@ async function runDetection() {
   }
 
   try {
+    const abusiveWords = await fetchAbusiveWords(); // Fetch abusive words from the file
+
     const res = await fetch("http://localhost:8000/detect-abuse", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ word: currentPost.text })
+      body: JSON.stringify({
+        text: currentPost.text,
+        abusive_words: abusiveWords // Use the fetched abusive words
+      })
     });
-    console.log("body",res) // Changed 'text' to 'word'
 
     if (!res.ok) throw new Error("Detection API failed");
 
     const result = await res.json();
+    console.log("Backend response:", result); // Log the backend response
 
     // Update UI with response
+    const abusiveWordsFound = result.analysis['abusive-words-found'] || [];
+    const sentiment = result.analysis.sentiment || { sentiment: "unknown", confidence: 0 };
+
     riskScores.innerHTML = `
       <p><strong>${currentPost.user}</strong></p>
-      <p>Abusive Detected: <strong>${result.abusive_detected}</strong></p>
-      <p>Message: ${result.message}</p>
+      <p>Abusive Detected: <strong>${abusiveWordsFound.length > 0 ? 'Yes' : 'No'}</strong></p>
+      <p>Sentiment: ${sentiment.sentiment} (Confidence: ${sentiment.confidence})</p>
     `;
 
     enrichedEvents.innerHTML = `
       <p><strong>${currentPost.user}</strong> — ${currentPost.text}</p>
-      <small>${result.message}</small>
+      <small>Analysis: ${result.analysis.text_analyze}</small>
     `;
 
     const logEntry = document.createElement("p");
-    logEntry.textContent = `${new Date().toLocaleTimeString()} — Detection run on ${currentPost.user}: ${result.message}`;
+    logEntry.textContent = `${new Date().toLocaleTimeString()} — Detection run on ${currentPost.user}: ${abusiveWordsFound.length > 0 ? 'Abusive content found' : 'No abusive content'}`;
     activityLog.appendChild(logEntry);
 
   } catch (err) {
