@@ -22,9 +22,9 @@ class WordRequest(BaseModel):
     text: str
     abusive_words: list[str]
 
-@app.get("/")
-async def root():
-    return {"message": "Welcome to the Abusive Word Detection API. Use the /analyze endpoint to analyze text."}
+# @app.get("/")
+# async def root():
+#     return {"message": "Welcome to the Abusive Word Detection API. Use the /analyze endpoint to analyze text."}
 
 @app.post("/detect-abuse")
 async def detect_abuse_endpoint(request: WordRequest):
