@@ -14,29 +14,48 @@ async function fetchAbusiveWords() {
 }
 
 async function loadFeed() {
-  feedContainer.innerHTML = "<p>Loading SoDA feed...</p>";
-  const sodaData = await fetchSoDAFeed();
+  feedContainer.innerHTML = "<p>Loading saved Instagram feed...</p>";
 
-  if (!sodaData.length) {
-    feedContainer.innerHTML = "<p>No posts found.</p>";
-    return;
-  }
+  // Load saved data
+const savedData = await loadSavedData("instagram_posts.json");
 
-  feedContainer.innerHTML = "";
-  sodaData.forEach((post, index) => {
-    const div = document.createElement("div");
-    div.classList.add("feed-item");
-    div.innerHTML = `
-      <strong>${post.platform}</strong><br>
-      <span>${post.user}</span><br>
-      <small>${post.time}</small>
-      <p>${post.text}</p>
-      ${post.media_url ? `<img src="${post.media_url}" alt="media" style="max-width:100%; border-radius:6px; margin-top:6px;">` : ""}
-    `;
-    div.onclick = () => selectPost(post, index);
-    feedContainer.appendChild(div);
-  });
+if (!savedData || !Array.isArray(savedData.data)) {
+  console.error("❌ Saved posts not in expected array format");
+  feedContainer.innerHTML = "<p>Error loading saved data.</p>";
+  return;
 }
+// Extract raw posts
+const rawPosts = savedData.data;
+
+// Convert to UI-friendly format
+const posts = rawPosts.map(post => ({
+  id: post.id,
+  user: "binisagiri0",
+  platform: "Instagram",
+  time: new Date(post.timestamp).toLocaleString(),
+  text: post.caption || "(no caption)",
+  media_url: post.media_url,
+}));
+
+// Display posts
+feedContainer.innerHTML = "";
+posts.forEach((post, index) => {
+  const div = document.createElement("div");
+  div.classList.add("feed-item");
+  div.innerHTML = `
+    <strong>${post.platform}</strong><br>
+    <span>${post.user}</span><br>
+    <small>${post.time}</small>
+    <p>${post.text}</p>
+    ${post.media_url ? `<img src="${post.media_url}" alt="media" style="max-width:100%; border-radius:6px; margin-top:6px;">` : ""}
+  `;
+  div.onclick = () => selectPost(post, index);
+  feedContainer.appendChild(div);
+});
+
+  console.log(`✅ Loaded ${posts.length} saved posts`);
+}
+
 
 function selectPost(post, index) {
   currentPost = post; // store the selected post
@@ -191,22 +210,31 @@ async function runCommentDetection(commentId, commentText) {
     const result = await res.json();
     const abusiveWordsFound = result.analysis['abusive-words-found'] || [];
     const sentiment = result.analysis.sentiment || { sentiment: "unknown", confidence: 0 };
+    
+    // Get sentiment color
+    const sentimentColor = getSentimentColor(sentiment.sentiment);
 
-    // Show detection result in a popup or update UI
+    // Show detection result with color-coded popup
     const detectionResult = `
       Comment Analysis:
       Text: "${commentText}"
+      Sentiment: ${sentiment.sentiment.toUpperCase()} (${sentiment.confidence})
       Abusive Content: ${abusiveWordsFound.length > 0 ? 'YES' : 'NO'}
-      Sentiment: ${sentiment.sentiment} (${sentiment.confidence})
       ${abusiveWordsFound.length > 0 ? `\nAbusive words found: ${abusiveWordsFound.join(', ')}` : ''}
     `;
     
-    alert(detectionResult);
+    // alert(detectionResult);
     
-    // Log detection result
+    // Log detection result with lighter color styling
     const logEntry = document.createElement("p");
-    logEntry.style.color = abusiveWordsFound.length > 0 ? "#ff4444" : "#28a745";
-    logEntry.textContent = `${new Date().toLocaleTimeString()} — Comment detection: ${abusiveWordsFound.length > 0 ? 'Abusive content found' : 'Clean content'}`;
+    logEntry.style.border = `2px solid ${sentimentColor}`;
+    logEntry.style.backgroundColor = "rgba(255,255,255,0.9)";
+    logEntry.style.color = sentimentColor;
+    logEntry.style.padding = "5px 10px";
+    logEntry.style.borderRadius = "3px";
+    logEntry.style.marginBottom = "5px";
+    logEntry.style.fontWeight = "bold";
+    logEntry.textContent = `${new Date().toLocaleTimeString()} — Comment: ${sentiment.sentiment.toUpperCase()} (${abusiveWordsFound.length > 0 ? 'Abusive' : 'Clean'})`;
     activityLog.appendChild(logEntry);
     
   } catch (err) {
@@ -477,19 +505,47 @@ async function runDetection() {
     const abusiveWordsFound = result.analysis['abusive-words-found'] || [];
     const sentiment = result.analysis.sentiment || { sentiment: "unknown", confidence: "0%" };
 
+    // Determine sentiment color
+    const sentimentColor = getSentimentColor(sentiment.sentiment);
+    
+    // Update the selected post div with ONLY colored border
+    const selectedPostDiv = document.getElementById("selected-post");
+    selectedPostDiv.style.backgroundColor = ""; // Remove background color
+    selectedPostDiv.style.border = `3px solid ${sentimentColor}`;
+    selectedPostDiv.style.borderRadius = "8px";
+    selectedPostDiv.style.padding = "15px";
+    selectedPostDiv.style.transition = "all 0.3s ease";
+
+    // Update UI with response - light background only
     riskScores.innerHTML = `
-      <p><strong>${currentPost.user}</strong></p>
-      <p>Abusive Detected: <strong>${abusiveWordsFound.length > 0 ? 'Yes' : 'No'}</strong></p>
-      <p>Sentiment: ${sentiment.sentiment} (Confidence: ${sentiment.confidence})</p>
+      <div style="border: 2px solid ${sentimentColor}; background-color: rgba(255,255,255,0.9); padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+        <p><strong>User:</strong> ${currentPost.user}</p>
+        <p><strong>Sentiment:</strong> <span style="font-weight: bold; color: ${sentimentColor};">${sentiment.sentiment.toUpperCase()}</span></p>
+        <p><strong>Confidence:</strong> ${sentiment.confidence}</p>
+        <p><strong>Abusive Content:</strong> <strong>${abusiveWordsFound.length > 0 ? 'YES' : 'NO'}</strong></p>
+        ${abusiveWordsFound.length > 0 ? `<p><strong>Abusive Words:</strong> ${abusiveWordsFound.join(', ')}</p>` : ''}
+      </div>
     `;
 
+    // Update enriched events with light color and colored border
     enrichedEvents.innerHTML = `
-      <p><strong>${currentPost.user}</strong> — ${currentPost.text}</p>
-      <small>Analysis: ${result.analysis.text_analyze || 'Analysis completed'}</small>
+      <div style="border: 2px solid ${sentimentColor}; border-left: 5px solid ${sentimentColor}; background-color: rgba(255,255,255,0.95); padding: 10px; border-radius: 5px;">
+        <p><strong>${currentPost.user}</strong> — ${currentPost.text}</p>
+        <small>Analysis: ${result.analysis.text_analyze || 'Analysis completed'}</small>
+        <br><small style="color: ${sentimentColor}; font-weight: bold;">Sentiment: ${sentiment.sentiment}</small>
+      </div>
     `;
 
+    // Log detection result with lighter color styling
     const logEntry = document.createElement("p");
-    logEntry.textContent = `${new Date().toLocaleTimeString()} — Detection run on ${currentPost.user}: ${abusiveWordsFound.length > 0 ? 'Abusive content found' : 'No abusive content'}`;
+    logEntry.style.border = `2px solid ${sentimentColor}`;
+    logEntry.style.backgroundColor = "rgba(255,255,255,0.9)";
+    logEntry.style.color = sentimentColor;
+    logEntry.style.padding = "5px 10px";
+    logEntry.style.borderRadius = "3px";
+    logEntry.style.marginBottom = "5px";
+    logEntry.style.fontWeight = "bold";
+    logEntry.textContent = `${new Date().toLocaleTimeString()} — Comment: ${sentiment.sentiment.toUpperCase()} (${abusiveWordsFound.length > 0 ? 'Abusive' : 'Clean'})`;
     activityLog.appendChild(logEntry);
 
   } catch (err) {
@@ -498,6 +554,31 @@ async function runDetection() {
   }
 }
 
+// Helper function to get sentiment colors
+function getSentimentColor(sentiment) {
+  switch(sentiment.toLowerCase()) {
+    case 'positive':
+      return '#28a745'; // Green
+    case 'negative':
+      return '#dc3545'; // Red
+    case 'neutral':
+      return '#6c757d'; // Gray
+    default:
+      return '#ffc107'; // Yellow for unknown
+  }
+}
+
+// Helper function to get darker version of color for borders
+function getDarkerColor(color) {
+  switch(color) {
+    case '#28a745': return '#1e7e34'; // Darker green
+    case '#dc3545': return '#c82333'; // Darker red
+    case '#6c757d': return '#545b62'; // Darker gray
+    case '#ffc107': return '#e0a800'; // Darker yellow
+    default: return color;
+  }
+}
+  
 // Wait for DOM to be fully loaded before attaching event listeners
 document.addEventListener('DOMContentLoaded', function() {
   // Get DOM elements

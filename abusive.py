@@ -7,6 +7,7 @@ import os
 from datetime import datetime
 from contextlib import asynccontextmanager
 from text_sniffer import detect_abuse
+from fastapi.responses import JSONResponse, FileResponse
 
 # Modern lifespan event handler (replaces @app.on_event)
 @asynccontextmanager
@@ -33,8 +34,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+@app.get("/favicon.ico")
+async def favicon():
+    return FileResponse("favicon.ico")
+# Models
+class RawDataRequest(BaseModel):
+    filename: str
+    data: dict | list
 
-# Existing models
 class WordRequest(BaseModel):
     text: str
     abusive_words: list[str]
@@ -55,9 +62,12 @@ async def root():
         "status": "healthy",
         "version": "1.0.0",
         "endpoints": {
+            "save_raw_data": "/save-raw-data",
+            "load_raw_data": "/load-raw-data/{filename}",
             "detect_abuse": "/detect-abuse",
             "report_comment": "/report-comment", 
             "get_reports": "/reports",
+            "update_report_status": "/reports/{report_id}/status",
             "api_docs": "/docs"
         }
     }
@@ -69,6 +79,45 @@ async def health_check():
         "timestamp": datetime.now().isoformat(),
         "service": "CyberShield API"
     }
+
+# Save raw data
+@app.post("/save-raw-data")
+async def save_raw_data(request: RawDataRequest):
+    try:
+        raw_data_dir = "raw_data"
+        if not os.path.exists(raw_data_dir):
+            os.makedirs(raw_data_dir)
+
+        file_path = os.path.join(raw_data_dir, request.filename)
+
+        # ✅ If file already exists, do NOT save again
+        if os.path.exists(file_path):
+            return {
+                "status": "exists",
+                "message": f"File {request.filename} already saved — skipping."
+            }
+
+        # ✅ Write new file
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(request.data, f, indent=2, ensure_ascii=False)
+
+        return {"status": "success", "message": f"Raw data saved as {request.filename}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save raw data: {e}")
+# Load saved data
+@app.get("/load-raw-data/{filename}")
+async def load_raw_data(filename: str):
+    try:
+        file_path = os.path.join("raw_data", filename)
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load raw data: {e}")
 
 # Existing detect-abuse endpoint
 @app.post("/detect-abuse")
@@ -92,37 +141,24 @@ async def detect_abuse_endpoint(request: WordRequest):
 @app.post("/report-comment")
 async def collect_report(report: ReportRequest):
     try:
-        # Create reports directory if it doesn't exist
         reports_dir = "reports"
         if not os.path.exists(reports_dir):
             os.makedirs(reports_dir)
         
-        # Create report entry
-        report_entry = {
-            "commentId": report.commentId,
-            "username": report.username,
-            "commentText": report.commentText,
-            "reason": report.reason,
-            "timestamp": report.timestamp,
-            "reportedBy": report.reportedBy,
-            "processed_at": datetime.now().isoformat(),
-            "status": "pending"
-        }
-        
-        # Save to JSON file
         reports_file = os.path.join(reports_dir, "collected_reports.json")
-        
-        # Load existing reports or create new list
         if os.path.exists(reports_file):
             with open(reports_file, "r", encoding="utf-8") as f:
                 reports = json.load(f)
         else:
             reports = []
         
-        # Add new report
+        report_entry = {
+            **report.dict(),
+            "processed_at": datetime.now().isoformat(),
+            "status": "pending"
+        }
         reports.append(report_entry)
         
-        # Save updated reports
         with open(reports_file, "w", encoding="utf-8") as f:
             json.dump(reports, f, indent=2, ensure_ascii=False)
         
